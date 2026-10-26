@@ -13,6 +13,16 @@ macro(__compiler_diab lang)
   set(CMAKE_${lang}_VERBOSE_FLAG "-#")
   set(CMAKE_${lang}_OUTPUT_EXTENSION ".o")
 
+  if("${lang}" MATCHES "^(C|CXX)$")
+    # Bit 1 includes all headers; bit 4 continues compilation.
+    set(CMAKE_DEPFILE_FLAGS_${lang} "-Xmake-dependency=5 -Xmake-dependency-target=<DEP_TARGET> -Xmake-dependency-savefile=<DEP_FILE> -Xmake-dependency-canonicalize-path")
+    if((NOT DEFINED CMAKE_DEPENDS_USE_COMPILER OR CMAKE_DEPENDS_USE_COMPILER)
+        AND CMAKE_GENERATOR MATCHES "Makefiles|WMake")
+      set(CMAKE_${lang}_DEPFILE_FORMAT gcc)
+      set(CMAKE_${lang}_DEPENDS_USE_COMPILER TRUE)
+    endif()
+  endif()
+
   string(APPEND CMAKE_${lang}_FLAGS_INIT " ")
   string(APPEND CMAKE_${lang}_FLAGS_DEBUG_INIT " -g")
   string(APPEND CMAKE_${lang}_FLAGS_MINSIZEREL_INIT " -O -Xsize-opt")
