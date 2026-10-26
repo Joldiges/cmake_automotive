@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.31)
+project(PackageSmoke C CXX)
+enable_testing()
+add_executable(native-smoke main.cpp answer.c)
+add_test(NAME native-smoke COMMAND native-smoke)

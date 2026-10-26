@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
+schema_version: 1
+
+context:
+  version: "4.4.4"
+
+package:
+  name: cmake-automotive
+  version: ${{ version }}
+
+source:
+  path: ..
+
+build:
+  number: ${{ env.get("GIT_BUILD_NUMBER", default="0") }}
+  string: ${{ env.get("GIT_BUILD_STRING", default="local") }}
+  script: build
+
+requirements:
+  build:
+    - ${{ compiler("c") }}
+    - ${{ compiler("cxx") }}
+    - if: linux
+      then: ${{ stdlib("c") }}
+    - cmake >=3.31
+    - ninja
+  host:
+    - if: linux
+      then: openssl
+  run_constraints:
+    - cmake <0a0
+
+tests:
+  - package_contents:
+      bin:
+        - cmake
+        - ctest
+        - cpack
+      files:
+        - "**/Modules/Compiler/Diab.cmake"
+        - "**/Modules/Compiler/Diab-DetermineCompiler.cmake"
+  - script:
+      - cmake --version
+      - ctest --version
+      - cpack --version
+      - cmake -S native-smoke -B native-build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - cmake --build native-build
+      - ctest --test-dir native-build --output-on-failure
+      - cmake -S Tests/RunCMake/DiabCompilerId -B id-build -G Ninja -DRunCMake_TEST=VersionMacros
+      - cmake --build id-build
+      - cmake -Dbuild_dir=id-build -P Tests/RunCMake/DiabCompilerId/check.cmake
+    requirements:
+      run:
+        - ${{ compiler("c") }}
+        - ${{ compiler("cxx") }}
+        - ninja
+    files:
+      recipe:
+        - native-smoke/
+      source:
+        - Tests/RunCMake/DiabCompilerId/
+
+about:
+  homepage: https://cmake.org/
+  repository: https://github.com/Joldiges/cmake_automotive
+  summary: CMake with maintained Wind River Diab compiler integration fixes
+  license: BSD-3-Clause
+  license_file:
+    - LICENSE.rst
+    - Utilities/**/LICENSE*
+    - Utilities/**/COPYING*
+    - Utilities/cmzlib/Copyright.txt

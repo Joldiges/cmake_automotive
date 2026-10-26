@@ -1,0 +1,72 @@
+name: Automotive conda packages
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish tested packages (requires prefix-publish environment approval)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-64
+          - os: windows-2022
+            target: win-64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set package provenance
+        shell: bash
+        run: |
+          echo "GIT_BUILD_STRING=g${GITHUB_SHA:0:7}_${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "GIT_BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+      - uses: prefix-dev/rattler-build-action@v0.2.39
+        with:
+          rattler-build-version: v0.74.0
+          recipe-path: conda.recipe/recipe.yaml
+          artifact-name: cmake-${{ matrix.target }}
+          build-args: --experimental --target-platform=${{ matrix.target }} -c conda-forge
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: prefix-publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: cmake-*
+          path: packages
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          run-install: false
+      - name: Publish reviewed artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r -d '' package; do
+            found=1
+            pixi exec --spec 'rattler-build=0.74.0' rattler-build upload prefix \
+              --skip-existing --channel jamesoldiges/bobs-forge "$package"
+          done < <(find packages -type f -name '*.conda' -print0)
+          if [[ "$found" -eq 0 ]]; then
+            echo "No package artifacts found" >&2
+            exit 1
+          fi
