@@ -1,5 +1,5 @@
 @echo off
-cmake -S . -B automotive-build -G Ninja %CMAKE_ARGS% ^
+cmake -S . -B b -G Ninja %CMAKE_ARGS% ^
   -DCMAKE_BUILD_TYPE=Release ^
   -DCMAKE_INSTALL_PREFIX="%LIBRARY_PREFIX%" ^
   -DCMAKE_USE_SYSTEM_LIBRARIES=OFF ^
@@ -8,9 +8,9 @@ cmake -S . -B automotive-build -G Ninja %CMAKE_ARGS% ^
   -DBUILD_QtDialog=OFF ^
   -DBUILD_TESTING=ON
 if errorlevel 1 exit /b 1
-cmake --build automotive-build --parallel %CPU_COUNT%
+cmake --build b --parallel %CPU_COUNT%
 if errorlevel 1 exit /b 1
-automotive-build\bin\ctest.exe --test-dir automotive-build -R "^RunCMake.DiabCompilerId$" --output-on-failure
+b\bin\ctest.exe --test-dir b -R "^RunCMake.DiabCompilerId$" --output-on-failure
 if errorlevel 1 exit /b 1
-cmake --install automotive-build
+cmake --install b
 if errorlevel 1 exit /b 1
